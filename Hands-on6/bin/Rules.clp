@@ -31,26 +31,27 @@
    )
 )
 
-
+;; Para colocar el total de la compra por la orden y el cliente
+;; Si algun articulo supera los 10 de cantidad se le realiza un descuento
 (defglobal ?*contador* = 0)
+(defglobal ?*total* = 0)
 (
    defrule descuento10Nuevo2
    (customer (customer-id ?id) (name ?n) {customer-id == 102})
-   (order (customer-id ?id) (order-number ?on))
+   (order (customer-id ?id) (order-number ?on) {order-number == 100})
    (line-item (order-number ?on) (quantity ?q) (part-number ?pn))
    (product (part-number ?pn) (price ?p))
    =>
    (bind ?*contador* (+ ?*contador* 1))
    (
    	if (>= ?q 10) then
-   		(printout t "Descuento aplicado Nuevo 10% total: " (- (* ?p ?q) (* (* ?p ?q) 0.10)) " de: " (* ?p ?q) crlf)
-
+         (bind ?*total* (+ ?*total* (- (* ?p ?q) (* (* ?p ?q) 0.10))))
    	else
-
+         (bind ?*total* (+ ?*total* (* ?p ?q)))
    )
    (
    	if (== ?*contador* 3) then
-   		(printout t "Descuento aplicado Nuevo 10% total: " crlf)
+   		(printout t "Total de la compra: " ?*total* crlf)
    )
 )
 
@@ -74,6 +75,19 @@
 	=>
 	(printout t "Call to: " ?esa crlf)
 )
+
+;; Realizar descuento del 20% en la cantidad total de la compra si el comprador
+;; es su primera compra
+(defrule cust-not-buying
+   (and 
+     (customer (customer-id ?id) (name ?name) {customer-id == 100})
+     (not (order (order-number ?order) (customer-id ?id)))
+   )
+   =>
+   (printout t "20" crlf)
+)
+
+
 
 ;; Regla 3: Si la existencia, en stock, del producto con la clave 101 es menor a 5, entonces solicitar
 ;; 2 cajas del producto con clave 101 a su proveedor respectivo.

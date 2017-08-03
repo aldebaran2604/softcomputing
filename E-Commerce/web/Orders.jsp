@@ -13,6 +13,7 @@
         && request.getParameter("OrdersData")!=null
         && request.getParameter("CustomerID")!=null
         && request.getParameter("OrderID")!=null
+        && request.getParameter("index")!=null
     ) {
         engine.executeCommand("(deftemplate customer (slot customer-id) (multislot name) (multislot address))");
         engine.executeCommand("(deftemplate product (slot part-number) (slot name) (slot category) (slot price))");
@@ -74,15 +75,41 @@
         engine.executeCommand(listaOrdersFacts);
         engine.executeCommand(ordersDataFacts);
         engine.executeCommand("(reset)");
-        engine.executeCommand("(defrule prods-bought "+
-        "(order (order-number ?order)) "+
-        "(line-item (order-number ?order) (part-number ?part)) "+
-        "(product (part-number ?part) (name ?pn)) "+
-        "=> "+
-        "(printout page ?pn \" was bought <br>\" crlf))");
+        if (request.getParameter("index").equals("1")) {
+            engine.executeCommand("(defglobal ?*contador* = 0)");
+            engine.executeCommand("(defglobal ?*total* = 0)");
+            engine.executeCommand("( "+
+                "defrule descuento10Nuevo2 "+
+                "(customer (customer-id ?id) (name ?n) {customer-id == "+request.getParameter("CustomerID")+"}) "+
+                "(order (customer-id ?id) (order-number ?on) {order-number == "+request.getParameter("OrderID")+"}) "+
+                "(line-item (order-number ?on) (quantity ?q) (part-number ?pn)) "+
+                "(product (part-number ?pn) (price ?p)) "+
+                "=> "+
+                "(bind ?*contador* (+ ?*contador* 1)) "+
+                "( "+
+                 "if (>= ?q 10) then "+
+                      "(bind ?*total* (+ ?*total* (- (* ?p ?q) (* (* ?p ?q) 0.10)))) "+
+                 "else "+
+                      "(bind ?*total* (+ ?*total* (* ?p ?q))) "+
+                ") "+
+                "( "+
+                 "if (= ?*contador* "+hm.get(request.getParameter("OrderID")) +") then "+
+                     "(printout page \"Total de la compra: \" ?*total* crlf) "+
+                ")"+
+             ") ");
+        }
+        if (request.getParameter("index").equals("2")) {
+            engine.executeCommand("(defrule cust-not-buying "+
+                "(and "+
+                  "(customer (customer-id ?id) (name ?name) {customer-id == 100}) "+
+                  "(not (order (order-number ?order) (customer-id ?id))) "+
+                ") "+
+                "=> "+
+                "(printout page \"Descuento:20\" crlf) "+
+             ") ");
+        }
         engine.executeCommand("(facts)");
         engine.executeCommand("(run)");
-        out.print(hm);
     } else {
         out.print("Texto XD");
     }
