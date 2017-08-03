@@ -31,6 +31,29 @@
    )
 )
 
+
+(defglobal ?*contador* = 0)
+(
+   defrule descuento10Nuevo2
+   (customer (customer-id ?id) (name ?n) {customer-id == 102})
+   (order (customer-id ?id) (order-number ?on))
+   (line-item (order-number ?on) (quantity ?q) (part-number ?pn))
+   (product (part-number ?pn) (price ?p))
+   =>
+   (bind ?*contador* (+ ?*contador* 1))
+   (
+   	if (>= ?q 10) then
+   		(printout t "Descuento aplicado Nuevo 10% total: " (- (* ?p ?q) (* (* ?p ?q) 0.10)) " de: " (* ?p ?q) crlf)
+
+   	else
+
+   )
+   (
+   	if (== ?*contador* 3) then
+   		(printout t "Descuento aplicado Nuevo 10% total: " crlf)
+   )
+)
+
 ;; Regla 2: Si un cliente no compra -(no tiene órdenes asociadas)-, entonces llamarle y enviarle un
 ;; SMS ofreciéndole un 20% de descuento en su próxima compra.
 (
