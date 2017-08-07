@@ -13,7 +13,7 @@
         && request.getParameter("OrdersData")!=null
         && request.getParameter("CustomerID")!=null
         && request.getParameter("OrderID")!=null
-        && request.getParameter("index")!=null
+        && request.getParameter("Index")!=null
     ) {
         engine.executeCommand("(deftemplate customer (slot customer-id) (multislot name) (multislot address))");
         engine.executeCommand("(deftemplate product (slot part-number) (slot name) (slot category) (slot price))");
@@ -101,7 +101,7 @@
         if (request.getParameter("index").equals("2")) {
             engine.executeCommand("(defrule cust-not-buying "+
                 "(and "+
-                  "(customer (customer-id ?id) (name ?name) {customer-id == 100}) "+
+                  "(customer (customer-id ?id) (name ?name) {customer-id == "+request.getParameter("CustomerID")+"}) "+
                   "(not (order (order-number ?order) (customer-id ?id))) "+
                 ") "+
                 "=> "+
