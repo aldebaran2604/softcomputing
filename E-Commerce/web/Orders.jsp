@@ -1,6 +1,6 @@
 <%@page import="java.util.HashMap"%>
 <%@page import="jess.*" %>
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@page contentType="text/plain" pageEncoding="UTF-8" %>
 <jsp:useBean id="engine" class="jess.Rete" scope="request"/>
 <%
     engine.addOutputRouter("page", out);
@@ -14,6 +14,7 @@
         && request.getParameter("CustomerID")!=null
         && request.getParameter("OrderID")!=null
         && request.getParameter("Index")!=null
+        && request.getParameter("Descuento")!=null
     ) {
         engine.executeCommand("(deftemplate customer (slot customer-id) (multislot name) (multislot address))");
         engine.executeCommand("(deftemplate product (slot part-number) (slot name) (slot category) (slot price))");
@@ -41,41 +42,47 @@
         }
         customersFacts+=" )";
         String[] splitListOrders = request.getParameter("ListOrders").toString().split(",");
-        String listaOrdersFacts = "(deffacts orders ";
-        for (int l=0; l<splitListOrders.length; l++) {
-            String[] listOrder = splitListOrders[l].toString().split("\\*");
-            hm.put(listOrder[0], 0);
-            listaOrdersFacts+=" (order (order-number "+listOrder[0]+") (customer-id "+listOrder[1]+")) ";
+        String listaOrdersFacts = "";
+        if (request.getParameter("ListOrders").toString().length()>0) {
+            listaOrdersFacts += "(deffacts orders ";
+            for (int l=0; l<splitListOrders.length; l++) {
+                String[] listOrder = splitListOrders[l].toString().split("\\*");
+                hm.put(listOrder[0], 0);
+                listaOrdersFacts+=" (order (order-number "+listOrder[0]+") (customer-id "+listOrder[1]+")) ";
+            }
+            if (splitListOrders.length==0) {
+                listaOrdersFacts+=" (order (order-number 300) (customer-id 101)) ";
+            }
+            listaOrdersFacts+=" )";
         }
-        if (splitListOrders.length==0) {
-            listaOrdersFacts+=" (order (order-number 300) (customer-id 101)) ";
-        }
-        listaOrdersFacts+=" )";
         String[] splitOrdersData = request.getParameter("OrdersData").toString().split("-");
-        String ordersDataFacts = "(deffacts items-list ";
-        for (int o=0; o<splitOrdersData.length; o++) {
-            String[] ordersData = splitOrdersData[o].toString().split(",");
-            for (int od=0; od<ordersData.length; od++) {
-                String[] order = ordersData[od].toString().split("\\*");
-                ordersDataFacts+=" (line-item (order-number "+order[0]+") (part-number "+order[1]+") (quantity "+order[2]+")) ";
-                if (hm.get(order[0])!=null) {
-                    int auxCount = (int)hm.get(order[0]);
-                    auxCount++;
-                    hm.remove(order[0]);
-                    hm.put(order[0], auxCount);
+        String ordersDataFacts = "";
+        if (request.getParameter("OrdersData").toString().length()>0) {
+            ordersDataFacts += "(deffacts items-list ";
+            for (int o=0; o<splitOrdersData.length; o++) {
+                String[] ordersData = splitOrdersData[o].toString().split(",");
+                for (int od=0; od<ordersData.length; od++) {
+                    String[] order = ordersData[od].toString().split("\\*");
+                    ordersDataFacts+=" (line-item (order-number "+order[0]+") (part-number "+order[1]+") (quantity "+order[2]+")) ";
+                    if (hm.get(order[0])!=null) {
+                        int auxCount = (int)hm.get(order[0]);
+                        auxCount++;
+                        hm.remove(order[0]);
+                        hm.put(order[0], auxCount);
+                    }
                 }
             }
+            if (splitOrdersData.length==0) {
+                ordersDataFacts+=" (line-item (order-number 300) (part-number 1234)) ";
+            }
+            ordersDataFacts+=" )";
         }
-        if (splitOrdersData.length==0) {
-            ordersDataFacts+=" (line-item (order-number 300) (part-number 1234)) ";
-        }
-        ordersDataFacts+=" )";
         engine.executeCommand(productsFacts);
         engine.executeCommand(customersFacts);
         engine.executeCommand(listaOrdersFacts);
         engine.executeCommand(ordersDataFacts);
         engine.executeCommand("(reset)");
-        if (request.getParameter("index").equals("1")) {
+        if (request.getParameter("Index").equals("1")) {
             engine.executeCommand("(defglobal ?*contador* = 0)");
             engine.executeCommand("(defglobal ?*total* = 0)");
             engine.executeCommand("( "+
@@ -94,16 +101,16 @@
                 ") "+
                 "( "+
                  "if (= ?*contador* "+hm.get(request.getParameter("OrderID")) +") then "+
-                     "(printout page \"Total de la compra: \" ?*total* crlf) "+
+                     "(printout page \"Total de la compra: \" (- ?*total* (* ?*total* 0."+request.getParameter("Descuento")+")) crlf) "+
                 ")"+
              ") ");
         }
-        if (request.getParameter("index").equals("2")) {
+        if (request.getParameter("Index").equals("2")) {
             engine.executeCommand("(defrule cust-not-buying "+
-                "(and "+
-                  "(customer (customer-id ?id) (name ?name) {customer-id == "+request.getParameter("CustomerID")+"}) "+
-                  "(not (order (order-number ?order) (customer-id ?id))) "+
-                ") "+
+                "(not (and "+
+                  "(customer (customer-id ?id) (name ?name)) "+
+                  "(order (order-number ?order) (customer-id ?id) {customer-id == "+request.getParameter("CustomerID")+"}) "+
+                ")) "+
                 "=> "+
                 "(printout page \"Descuento:20\" crlf) "+
              ") ");
